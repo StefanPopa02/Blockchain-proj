@@ -1,0 +1,22 @@
+.container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.managerContainer {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  height: 100vh;
+  padding-top: 10em;
+  padding-left: 10em;
+  padding-right: 10em;
+}
+
+.managerTable {
+  min-width: 250px;
+  width: 66%;
+}

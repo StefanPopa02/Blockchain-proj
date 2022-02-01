@@ -1,0 +1,12 @@
+.container{
+
+}
+
+.my-card{
+    width: 50%;
+    height: 50%;
+}
+
+.ant-card-head {
+    text-align: center;
+}
