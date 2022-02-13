@@ -1,15 +1,17 @@
-import React from "react";
+import React, { useContext, useEffect } from "react";
 import "./TaskCreate.css";
 import { Form, Input, Button, Select, Card, InputNumber, Alert } from 'antd';
 import CATEGORIES from "../../../../Categories";
 import { useState } from "react/cjs/react.development";
 import { createNewTask } from "../../../../web3/Web3Client";
-
+import { GlobalContext } from "../../../../context/MyContext";
 
 const { Option } = Select;
 
 export default function TaskCreate() {
   const formRef = React.createRef();
+  const [ ready, setReady ] = useState(false);
+  const { setSpinner } = useContext(GlobalContext);
 
   const warnings = { 
     ready: false,
@@ -25,6 +27,7 @@ export default function TaskCreate() {
   };
 
   const onFinish = (values) => {
+    setSpinner(true);
     console.log("values from form", values);
     const description = values.description;
     const RF = values.rf;
@@ -36,12 +39,14 @@ export default function TaskCreate() {
           ready: true,
           success: true
         })
+        setSpinner(false);
         return;
       }
       setAlert({
         ready: true,
         success: false
       })
+      setSpinner(false);
     })
   }
 

@@ -69,6 +69,15 @@ export default function Evaluator() {
   const [tasksAssigned, setTasksAssigned] = useState([]);
   const [tasksMarket, setTasksMarket] = useState([]);
   const { tasks, setTasks } = useContext(GlobalContext);
+  const [ ready, setReady ] = useState(false);
+  const { setSpinner } = useContext(GlobalContext);
+  useEffect(()=>{
+    if(ready){
+        setSpinner(false);
+    }else{
+        setSpinner(true);
+    }
+}, [ready])
   useEffect(() => {
     const getAllTasks = async () => {
       const allTasks = await getAllTasksWeb3();
@@ -87,6 +96,7 @@ export default function Evaluator() {
       });
       setTasksAssigned(tasksToDisplayTmp);
       setTasksMarket(tasksMarketTmp);
+      setReady(true);
     };
     getAllTasks();
   }, []);

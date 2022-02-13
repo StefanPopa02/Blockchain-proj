@@ -17,10 +17,21 @@ export default function Task() {
   let { taskId } = useParams();
   const [funding, _setFunding] = useState(-1);
   const { tasks, setTasks } = useContext(GlobalContext);
+  const [ ready, setReady ] = useState(false);
+  const { setSpinner } = useContext(GlobalContext);
+  
+  useEffect(()=>{
+    if(ready){
+        setSpinner(false);
+    }else{
+        setSpinner(true);
+    }
+}, [ready])
   useEffect(() => {
     const getAllTasks = async () => {
       const allTasks = await getAllTasksWeb3();
       setTasks(allTasks);
+      setReady(true);
     };
     getAllTasks();
   }, []);
@@ -31,6 +42,7 @@ export default function Task() {
     if (funding === -1) _setFunding(myTask.totalFunding);
   }
   const setFunding = (amount) => {
+    setSpinner(true);
     financeTaskWeb3(myTask.taskIndex, String(amount)).then((result) => {
       if (result.status) {
         window.location.reload();
@@ -39,6 +51,7 @@ export default function Task() {
   };
 
   const withdraw = (amount) => {
+    setSpinner(true);
     withdrawFundsWeb3(myTask.taskIndex, String(amount)).then((result) => {
       if (result.status) {
         window.location.reload();

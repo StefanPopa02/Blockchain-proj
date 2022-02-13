@@ -70,6 +70,15 @@ export default function Freelancer() {
   const [tasksAssigned, setTasksAssigned] = useState([]);
   const [tasksMarket, setTasksMarket] = useState([]);
   const { tasks, setTasks } = useContext(GlobalContext);
+  const [ ready, setReady ] = useState(false);
+  const { setSpinner } = useContext(GlobalContext);
+  useEffect(()=>{
+    if(ready){
+        setSpinner(false);
+    }else{
+        setSpinner(true);
+    }
+}, [ready])
   useEffect(() => {
     const getAllTasks = async () => {
       const allTasks = await getAllTasksWeb3();
@@ -88,7 +97,7 @@ export default function Freelancer() {
             states: [getTaskStatesString(parseInt(task.taskStatus))],
           });
         }
-        if (parseInt(task.taskStatus) === TASK_STATUS.FINANCED) {
+        if (parseInt(task.taskStatus) === TASK_STATUS.CERTIFIED) {
           tasksMarketTmp.push({
             key: task.taskIndex,
             description: task.description,
@@ -99,6 +108,7 @@ export default function Freelancer() {
       });
       setTasksAssigned(tasksToDisplayTmp);
       setTasksMarket(tasksMarketTmp);
+      setReady(true);
     };
     getAllTasks();
   }, []);

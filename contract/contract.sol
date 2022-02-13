@@ -1,15 +1,73 @@
 // SPDX-License-Identifier: MIT
 
-// pragma solidity >= 0.5.0 < 0.6.0;
-// import "https://github.com/provable-things/ethereum-api/blob/master/provableAPI_0.5.sol";
-// import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/release-v2.5.0/contracts/token/ERC20/ERC20.sol";
-
 pragma solidity ^0.6;
 import "https://github.com/provable-things/ethereum-api/blob/master/provableAPI_0.6.sol";
 import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v3.0.0/contracts/token/ERC20/ERC20.sol";
 
-contract myERC20Token is ERC20, usingProvable
-{
+struct Task{
+    uint taskIndex;
+    bool isSet;
+    bool isFunded;
+    string description;
+    uint256 RF;
+    uint256 RE;
+    uint256 totalFunding;
+    address managerAddr;
+    address evaluatorAddr;
+    address freelancerAddr;
+    address[] applyingFreelancersAddr;
+    Utils.Category category;  
+    Utils.TaskStatus taskStatus;  
+}
+
+struct UserType{
+    bool isSet;
+    Utils.ActorType actorType;
+}
+
+struct Manager{
+    bool isSet;
+    Utils.ActorType actorType;
+    string nume;
+    address managerAddr;
+}
+
+struct Freelancer{
+    bool isSet;
+    Utils.ActorType actorType;
+    string nume;
+    Utils.Category category;
+    uint reputatie;
+    address freelancerAddr;
+}
+
+struct Evaluator{
+    bool isSet;
+    Utils.ActorType actorType;
+    string nume;
+    Utils.Category category;
+    address evaluatorAddr;
+}
+
+struct Finantator{
+    bool isSet;
+    Utils.ActorType actorType;
+    string nume;
+    address finantatorAddr;
+}
+
+struct FundingLedger{
+    address finantatorAddr;
+    uint fundingAmount;
+}
+
+struct TaskTimer {
+    bool isSet;
+    uint taskIndex;
+    uint timerType;
+}
+
+library Utils {
     enum ActorType{
         Unassigned,
         Manager,
@@ -28,77 +86,54 @@ contract myERC20Token is ERC20, usingProvable
     enum TaskStatus{
         CREATED,
         FINANCED,
+        CERTIFIED,
         PROGRESS,
         READY,
         DECLINED,
         JUDGING,
         DONE
     }
+}
 
-    struct UserType{
-        bool isSet;
-        ActorType actorType;
+library TaskService {
+    function insert(Task[] storage tasks, string memory description, uint256 RF, uint256 RE, uint8 category) external {
+        uint newTaskIndex = tasks.length;
+        tasks.push(Task(newTaskIndex, true, false, description, RF, RE, 0, msg.sender, address(0x0), address(0x0), new address[](0), Utils.Category(category), Utils.TaskStatus.CREATED));
     }
 
-    struct Manager{
-        bool isSet;
-        ActorType actorType;
-        string nume;
-        address managerAddr;
+    function updateFinantatorEvidence(mapping(uint => FundingLedger[]) storage finantatorsFundingEvidence, uint taskIndex, uint amount) external {
+        bool found = false;
+        for(uint i=0; i<finantatorsFundingEvidence[taskIndex].length; i++){
+            if(finantatorsFundingEvidence[taskIndex][i].finantatorAddr == msg.sender){
+                finantatorsFundingEvidence[taskIndex][i].fundingAmount += amount;
+                found = true;
+                break;
+            }
+        }
+        if(!found){
+            finantatorsFundingEvidence[taskIndex].push(FundingLedger(msg.sender, amount));
+        }
     }
 
-    struct Freelancer{
-        bool isSet;
-        ActorType actorType;
-        string nume;
-        Category category;
-        uint reputatie;
-        address freelancerAddr;
+    function withdrawFunds(Task[] storage tasks, mapping(uint => FundingLedger[]) storage finantatorsFundingEvidence, uint taskIndex, uint amount) external returns(bool){
+        for(uint i=0; i < finantatorsFundingEvidence[taskIndex].length; i++) {
+            if(finantatorsFundingEvidence[taskIndex][i].finantatorAddr == msg.sender){
+                if(finantatorsFundingEvidence[taskIndex][i].fundingAmount >= amount){
+                    finantatorsFundingEvidence[taskIndex][i].fundingAmount -= amount;
+                    tasks[taskIndex].totalFunding -= amount;
+                    return true;
+                }else{
+                    return false;
+                }
+            }
+        }
+        return false;
     }
 
-    struct Evaluator{
-        bool isSet;
-        ActorType actorType;
-        string nume;
-        Category category;
-        uint reputatie;
-        address evaluatorAddr;
-    }
+}
 
-    struct Finantator{
-        bool isSet;
-        ActorType actorType;
-        string nume;
-        address finantatorAddr;
-    }
-
-    struct Task{
-        uint taskIndex;
-        bool isSet;
-        bool isFunded;
-        string description;
-        uint256 RF;
-        uint256 RE;
-        uint256 totalFunding;
-        address managerAddr;
-        address evaluatorAddr;
-        address freelancerAddr;
-        address[] applyingFreelancersAddr;
-        Category category;  
-        TaskStatus taskStatus;  
-    }
-
-    struct FundingLedger{
-        address finantatorAddr;
-        uint fundingAmount;
-    }
-
-    struct TaskTimer {
-        bool isSet;
-        uint taskIndex;
-        uint timerType;
-    }
-
+contract Marketplace is ERC20, usingProvable
+{
     mapping(address => UserType) public users;
     mapping(address => Freelancer) public freelancers;
     mapping(address => Evaluator) public evaluators;
@@ -118,9 +153,9 @@ contract myERC20Token is ERC20, usingProvable
     event TaskReady(uint taskIndex, address freelancerAddr, address managerAddr);
     event TaskJudging(uint taskIndex, address evaluatorAddr, address managerAddr);
     event TaskDone(uint taskIndex, address freelancerAddr, address managerAddr);
-    event TaskDestroyed(uint taskIndex);
+    event TaskDeclined(uint taskIndex);
     event ApplyingFreelancers(uint taskIndex, address freelancerAddr, address managerAddr);
-    event LogNewProvableQuery(string description);
+    event LogNewProvableQuery(string description, bytes32 queryId);
     event LogTimeUpdated(string time);
     event fallbackCall(string description);
     event receivedFunds(address addr, uint amount);
@@ -152,6 +187,7 @@ contract myERC20Token is ERC20, usingProvable
     }
 
     constructor() public ERC20("token", "$") payable{
+        _mint(address(this), 1000);
         provable_setCustomGasPrice(10000000000);
     }
 
@@ -160,76 +196,67 @@ contract myERC20Token is ERC20, usingProvable
     }
 
     function newFreelancer(string memory name, uint8 category) public notEnrolled{
-        freelancers[msg.sender] = Freelancer(true, ActorType.Freelancer, name, Category(category), 5, msg.sender);
-        users[msg.sender] = UserType(true, ActorType.Freelancer);
+        freelancers[msg.sender] = Freelancer(true, Utils.ActorType.Freelancer, name, Utils.Category(category), 5, msg.sender);
+        users[msg.sender] = UserType(true, Utils.ActorType.Freelancer);
         emit newFreelancerCreated(msg.sender, name, category);
     }
 
     function newEvaluator(string memory name, uint8 category) public notEnrolled{
-        evaluators[msg.sender] = Evaluator(true, ActorType.Evaluator, name, Category(category), 5, msg.sender);
-        users[msg.sender] = UserType(true, ActorType.Evaluator);
+        evaluators[msg.sender] = Evaluator(true, Utils.ActorType.Evaluator, name, Utils.Category(category), msg.sender);
+        users[msg.sender] = UserType(true, Utils.ActorType.Evaluator);
         emit newEvaluatorCreated(msg.sender, name, category);
     }
 
     function newManager(string memory name) public notEnrolled{
-        managers[msg.sender] = Manager(true, ActorType.Manager, name, msg.sender);
-        users[msg.sender] = UserType(true, ActorType.Manager);
+        managers[msg.sender] = Manager(true, Utils.ActorType.Manager, name, msg.sender);
+        users[msg.sender] = UserType(true, Utils.ActorType.Manager);
         emit newManagerCreated(msg.sender, name);
     }
 
     function newFinantator(string memory name) public notEnrolled{
-        finantators[msg.sender] = Finantator(true, ActorType.Finantator, name, msg.sender);
-        users[msg.sender] = UserType(true, ActorType.Finantator);
+        finantators[msg.sender] = Finantator(true, Utils.ActorType.Finantator, name, msg.sender);
+        users[msg.sender] = UserType(true, Utils.ActorType.Finantator);
+        _mint(msg.sender, 100);
         emit newFinantatorCreated(msg.sender, name);
     }
 
     function newTask(string memory description, uint256 RF, uint256 RE, uint8 category) public isManager{
-        uint newTaskIndex = tasks.length;
-        tasks.push(Task(newTaskIndex, true, false, description, RF, RE, 0, msg.sender, address(0x0), address(0x0), new address[](0), Category(category), TaskStatus.CREATED));
+        TaskService.insert(tasks, description, RF, RE, category);
     }
 
     function getTasksArrayLength() public view returns(uint){
         return tasks.length;
     }
 
-    function getManager(address inManagerAddr) public view returns(bool isSet, ActorType actorType, string memory nume, address managerAddr){
+    function getManager(address inManagerAddr) public view returns(bool isSet, Utils.ActorType actorType, string memory nume, address managerAddr){
         return (managers[inManagerAddr].isSet, managers[inManagerAddr].actorType, managers[inManagerAddr].nume, managers[inManagerAddr].managerAddr);
     }
 
-    function financeTask(uint256 taskIndex) public payable isFinantator{
+    function financeTask(uint256 taskIndex, uint amount) public isFinantator{
         require(tasks[taskIndex].isSet, "Task doesn't exist!");
         require(tasks[taskIndex].isFunded == false, "Task already funded!");
+        require(balanceOf(msg.sender) >= amount, "You don't have enough tokens!");
         uint necessaryFunds = tasks[taskIndex].RF + tasks[taskIndex].RE - tasks[taskIndex].totalFunding;
-        if(msg.value < necessaryFunds)
-        {
-            tasks[taskIndex].totalFunding += msg.value;
-            finantatorsFundingEvidence[taskIndex].push(FundingLedger(msg.sender, msg.value)); 
-        }else{
+        if(amount >= necessaryFunds){
+            amount = necessaryFunds;
             tasks[taskIndex].isFunded = true;
-            finantatorsFundingEvidence[taskIndex].push(FundingLedger(msg.sender, necessaryFunds));
-            tasks[taskIndex].totalFunding += necessaryFunds;
-            tasks[taskIndex].taskStatus = TaskStatus.FINANCED;
+            tasks[taskIndex].taskStatus = Utils.TaskStatus.FINANCED;
             emit TaskFinanced(taskIndex, tasks[taskIndex].managerAddr);
-            payable(msg.sender).transfer(msg.value - necessaryFunds);
         }
-
+        tasks[taskIndex].totalFunding += amount;
+        TaskService.updateFinantatorEvidence(finantatorsFundingEvidence, taskIndex, amount);
+        transfer(address(this), amount); 
     }
 
-    function withdrawFunds(uint256 taskIndex, uint256 amount) public isFinantator {
+    function withdrawFunds(uint256 taskIndex, uint amount) public isFinantator {
         require(tasks[taskIndex].isSet && !tasks[taskIndex].isFunded, "You can't withdraw funds");
-
-        for(uint256 i=0; i < finantatorsFundingEvidence[taskIndex].length; i++) {
-            if(finantatorsFundingEvidence[taskIndex][i].finantatorAddr == msg.sender){
-                if(finantatorsFundingEvidence[taskIndex][i].fundingAmount >= amount){
-                    finantatorsFundingEvidence[taskIndex][i].fundingAmount -= amount;
-                    tasks[taskIndex].totalFunding -= amount;
-                    payable(msg.sender).transfer(amount);
-                    break;
-                }else{
-                    revert();
-                }
-            }
+        bool finantatorFound = TaskService.withdrawFunds(tasks, finantatorsFundingEvidence, taskIndex, amount);
+        if(finantatorFound){
+            _transfer(address(this), msg.sender, amount);
+        }else{
+            revert("You didn't fund this task!");
         }
+
     }
 
     function getFinantatorsFundingEvLength(uint taskIndex) public view returns(uint) {
@@ -238,10 +265,10 @@ contract myERC20Token is ERC20, usingProvable
 
     function destroyTask(uint taskIndex) public ownsTask(taskIndex){
         require(!tasks[taskIndex].isFunded, "Task can't be destroyed after funding phase");
-        delete tasks[taskIndex];
-        emit TaskDestroyed(taskIndex);
+        tasks[taskIndex].taskStatus = Utils.TaskStatus.DECLINED;
+        emit TaskDeclined(taskIndex);
         for(uint i=0; i < finantatorsFundingEvidence[taskIndex].length; i++) {
-            payable(finantatorsFundingEvidence[taskIndex][i].finantatorAddr).transfer(finantatorsFundingEvidence[taskIndex][i].fundingAmount);
+            _transfer(address(this), finantatorsFundingEvidence[taskIndex][i].finantatorAddr, finantatorsFundingEvidence[taskIndex][i].fundingAmount);
         }
     }
 
@@ -250,19 +277,21 @@ contract myERC20Token is ERC20, usingProvable
         require(evaluators[evAddr].isSet, "Address given is not associated with an evaluator!");
         require(tasks[taskIndex].category == evaluators[evAddr].category, "Evaluator category doesn't match with the task!");
         tasks[taskIndex].evaluatorAddr = evAddr;
+        tasks[taskIndex].taskStatus = Utils.TaskStatus.CERTIFIED;
         startTimerFreelancers(taskIndex);
     } 
 
-    function applyForTask(uint taskIndex) public payable isFreelancer{
+    function applyForTask(uint taskIndex) public isFreelancer{
         require(tasks[taskIndex].evaluatorAddr != address(0x0), "Task must have an evaluator associated!");
         require(tasks[taskIndex].category == freelancers[msg.sender].category, "Your category doesn't match with the task!");
         require(tasks[taskIndex].freelancerAddr == address(0x0), "Task already has a freelancer associated!");
-        if(msg.value < tasks[taskIndex].RE){
+        require(tasks[taskIndex].taskStatus == Utils.TaskStatus.CERTIFIED, "Task is not certified!");
+        if(balanceOf(msg.sender) < tasks[taskIndex].RE){
             revert();
         }else{
             tasks[taskIndex].applyingFreelancersAddr.push(msg.sender);
             emit ApplyingFreelancers(taskIndex, msg.sender, tasks[taskIndex].managerAddr);
-            payable(msg.sender).transfer(msg.value - tasks[taskIndex].RE);
+            _transfer(msg.sender, address(this), tasks[taskIndex].RE);
         }
     } 
 
@@ -273,9 +302,9 @@ contract myERC20Token is ERC20, usingProvable
         for(uint i=0; i<tasks[taskIndex].applyingFreelancersAddr.length; i++){
             if(i == freelancerIndex){
                 tasks[taskIndex].freelancerAddr = tasks[taskIndex].applyingFreelancersAddr[freelancerIndex];
-                tasks[taskIndex].taskStatus = TaskStatus.PROGRESS;
+                tasks[taskIndex].taskStatus = Utils.TaskStatus.PROGRESS;
             }else{
-                payable(tasks[taskIndex].freelancerAddr).transfer(RE);            
+                _transfer(address(this), tasks[taskIndex].freelancerAddr, RE);   
             }
         }
     }
@@ -286,22 +315,22 @@ contract myERC20Token is ERC20, usingProvable
 
     function nominateTaskReady(uint taskIndex) public isFreelancer{
         require(tasks[taskIndex].freelancerAddr == msg.sender, "You are not associated to this task!");
-        require(tasks[taskIndex].taskStatus == TaskStatus.PROGRESS, "The task is not in progress!");
-        tasks[taskIndex].taskStatus = TaskStatus.READY;
+        require(tasks[taskIndex].taskStatus == Utils.TaskStatus.PROGRESS, "The task is not in progress!");
+        tasks[taskIndex].taskStatus = Utils.TaskStatus.READY;
         emit TaskReady(taskIndex, msg.sender, tasks[taskIndex].managerAddr);
     }
 
     function reviewTask(uint taskIndex, bool setTaskDone) public ownsTask(taskIndex){
-        require(tasks[taskIndex].taskStatus == TaskStatus.READY, "Task is not ready yet!");
+        require(tasks[taskIndex].taskStatus == Utils.TaskStatus.READY, "Task is not ready yet!");
         if(setTaskDone){
-            tasks[taskIndex].taskStatus = TaskStatus.DONE;
+            tasks[taskIndex].taskStatus = Utils.TaskStatus.DONE;
             if(freelancers[tasks[taskIndex].freelancerAddr].reputatie < 10){
                 freelancers[tasks[taskIndex].freelancerAddr].reputatie += 1;
             }
             emit TaskDone(taskIndex, tasks[taskIndex].freelancerAddr, msg.sender);
-            payable(tasks[taskIndex].freelancerAddr).transfer(tasks[taskIndex].RF + 2 * tasks[taskIndex].RE);
+            _transfer(address(this), tasks[taskIndex].freelancerAddr, tasks[taskIndex].RF + 2 * tasks[taskIndex].RE);
         }else{
-            tasks[taskIndex].taskStatus = TaskStatus.JUDGING;
+            tasks[taskIndex].taskStatus = Utils.TaskStatus.JUDGING;
             startTimerEvaluator(taskIndex);
             emit TaskJudging(taskIndex, tasks[taskIndex].evaluatorAddr, msg.sender);
         }
@@ -309,24 +338,24 @@ contract myERC20Token is ERC20, usingProvable
 
     function evaluateTask(uint taskIndex, bool setTaskDone) public {
         require(msg.sender == tasks[taskIndex].evaluatorAddr, "You are not the evaluator assigned to this task!");
-        require(tasks[taskIndex].taskStatus == TaskStatus.JUDGING, "The task is not in judging phase!");
+        require(tasks[taskIndex].taskStatus == Utils.TaskStatus.JUDGING, "The task is not in judging phase!");
         if(setTaskDone){
-            tasks[taskIndex].taskStatus = TaskStatus.DONE;
+            tasks[taskIndex].taskStatus = Utils.TaskStatus.DONE;
             if(freelancers[tasks[taskIndex].freelancerAddr].reputatie < 10){
                 freelancers[tasks[taskIndex].freelancerAddr].reputatie += 1;
             }
-            payable(tasks[taskIndex].freelancerAddr).transfer(tasks[taskIndex].RF + tasks[taskIndex].RE); 
+            _transfer(address(this), tasks[taskIndex].freelancerAddr, tasks[taskIndex].RF + tasks[taskIndex].RE); 
         }else{
-            tasks[taskIndex].taskStatus = TaskStatus.DECLINED;
+            tasks[taskIndex].taskStatus = Utils.TaskStatus.DECLINED;
             if(freelancers[tasks[taskIndex].freelancerAddr].reputatie > 0){
                 freelancers[tasks[taskIndex].freelancerAddr].reputatie -= 1;
             }
             for(uint i=0; i < finantatorsFundingEvidence[taskIndex].length; i++) {
-                payable(finantatorsFundingEvidence[taskIndex][i].finantatorAddr).transfer(finantatorsFundingEvidence[taskIndex][i].fundingAmount);
+                _transfer(address(this), finantatorsFundingEvidence[taskIndex][i].finantatorAddr, finantatorsFundingEvidence[taskIndex][i].fundingAmount);
             }
         }
 
-        payable(msg.sender).transfer(tasks[taskIndex].RE);
+        _transfer(address(this), msg.sender, tasks[taskIndex].RE);
     }
 
     function __callback(bytes32 _myid, string memory _result) public override{
@@ -337,24 +366,30 @@ contract myERC20Token is ERC20, usingProvable
         if(validIds[_myid].timerType == 0){
             if(tasks[validIds[_myid].taskIndex].applyingFreelancersAddr.length == 0){
                 //nu a aplicat nimeni in timpul limita
-                delete tasks[validIds[_myid].taskIndex];
-                emit TaskDestroyed(validIds[_myid].taskIndex);
+                tasks[validIds[_myid].taskIndex].taskStatus = Utils.TaskStatus.DECLINED;
+                emit TaskDeclined(validIds[_myid].taskIndex);
                 for(uint i=0; i < finantatorsFundingEvidence[validIds[_myid].taskIndex].length; i++) {
-                    payable(finantatorsFundingEvidence[validIds[_myid].taskIndex][i].finantatorAddr).transfer(finantatorsFundingEvidence[validIds[_myid].taskIndex][i].fundingAmount);
+                    _transfer(address(this), finantatorsFundingEvidence[validIds[_myid].taskIndex][i].finantatorAddr, finantatorsFundingEvidence[validIds[_myid].taskIndex][i].fundingAmount);
                 }
+            }else{
+                //OK
+                revert();
             }
         }
         //evaluator
         else{
             //nu s-a luat decizia in timpul acordat
-            if(tasks[validIds[_myid].taskIndex].taskStatus == TaskStatus.JUDGING){
-                tasks[validIds[_myid].taskIndex].taskStatus = TaskStatus.DONE;
+            if(tasks[validIds[_myid].taskIndex].taskStatus == Utils.TaskStatus.JUDGING){
+                tasks[validIds[_myid].taskIndex].taskStatus = Utils.TaskStatus.DONE;
+                emit TaskDone(validIds[_myid].taskIndex, tasks[validIds[_myid].taskIndex].freelancerAddr, tasks[validIds[_myid].taskIndex].managerAddr);
                 for(uint i=0; i < finantatorsFundingEvidence[validIds[_myid].taskIndex].length; i++) {
-                    payable(finantatorsFundingEvidence[validIds[_myid].taskIndex][i].finantatorAddr).transfer(finantatorsFundingEvidence[validIds[_myid].taskIndex][i].fundingAmount/2);
+                    _transfer(address(this), finantatorsFundingEvidence[validIds[_myid].taskIndex][i].finantatorAddr, finantatorsFundingEvidence[validIds[_myid].taskIndex][i].fundingAmount/2);
                 }
-                payable(tasks[validIds[_myid].taskIndex].freelancerAddr).transfer((tasks[validIds[_myid].taskIndex].RF + tasks[validIds[_myid].taskIndex].RE)/2 + tasks[validIds[_myid].taskIndex].RE);
+                _transfer(address(this), tasks[validIds[_myid].taskIndex].freelancerAddr, (tasks[validIds[_myid].taskIndex].RF + tasks[validIds[_myid].taskIndex].RE)/2 + tasks[validIds[_myid].taskIndex].RE);
+            }else{
+                //OK
+                revert();
             }
-
         }
         emit LogTimeUpdated(_result);
         delete validIds[_myid];
@@ -362,28 +397,36 @@ contract myERC20Token is ERC20, usingProvable
 
    function startTimerFreelancers(uint taskIndex) public {
        if (provable_getPrice("URL") > address(this).balance) {
-            emit LogNewProvableQuery("Provable query was NOT sent, please add some ETH to cover for the query fee");
+            emit LogNewProvableQuery("Provable query was NOT sent, please add some ETH to cover for the query fee", 0);
             revert();
         } else {
-            emit LogNewProvableQuery("Provable query was sent, standing by for the answer..");
-            bytes32 queryId = provable_query(60,"URL", "json(https://api.pro.coinbase.com/products/ETH-USD/ticker).time");
+            bytes32 queryId = provable_query(2*60,"URL", "json(https://api.pro.coinbase.com/products/ETH-USD/ticker).time");
+            emit LogNewProvableQuery("Provable query was sent, standing by for the answer..", queryId);
             validIds[queryId] = TaskTimer(true, taskIndex, 0);
         }
    }
 
    function startTimerEvaluator(uint taskIndex) public {
        if (provable_getPrice("URL") > address(this).balance) {
-            emit LogNewProvableQuery("Provable query was NOT sent, please add some ETH to cover for the query fee");
+            emit LogNewProvableQuery("Provable query was NOT sent, please add some ETH to cover for the query fee", 0);
             revert();
         } else {
-            emit LogNewProvableQuery("Provable query was sent, standing by for the answer..");
-            bytes32 queryId = provable_query(60,"URL", "json(https://api.pro.coinbase.com/products/ETH-USD/ticker).time");
+            bytes32 queryId = provable_query(2*60,"URL", "json(https://api.pro.coinbase.com/products/ETH-USD/ticker).time");
+            emit LogNewProvableQuery("Provable query was sent, standing by for the answer..", queryId);
             validIds[queryId] = TaskTimer(true, taskIndex, 1);
         }
    }
 
-    function deposit(uint256 amount) external payable{
-        _mint(msg.sender, amount);
+    function exchange() external payable{
+        _mint(msg.sender, msg.value);
+    }
+
+    function fundContract() external payable{
+
+    }
+
+    function balanceOfContract() public view returns(uint){
+        return balanceOf(address(this));
     }
 
     receive () external payable {

@@ -86,6 +86,12 @@ export const init = async () => {
                     "internalType": "string",
                     "name": "description",
                     "type": "string"
+                },
+                {
+                    "indexed": false,
+                    "internalType": "bytes32",
+                    "name": "queryId",
+                    "type": "bytes32"
                 }
             ],
             "name": "LogNewProvableQuery",
@@ -114,7 +120,7 @@ export const init = async () => {
                     "type": "uint256"
                 }
             ],
-            "name": "TaskDestroyed",
+            "name": "TaskDeclined",
             "type": "event"
         },
         {
@@ -435,7 +441,7 @@ export const init = async () => {
             ],
             "name": "applyForTask",
             "outputs": [],
-            "stateMutability": "payable",
+            "stateMutability": "nonpayable",
             "type": "function"
         },
         {
@@ -471,6 +477,19 @@ export const init = async () => {
                 }
             ],
             "name": "balanceOf",
+            "outputs": [
+                {
+                    "internalType": "uint256",
+                    "name": "",
+                    "type": "uint256"
+                }
+            ],
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "inputs": [],
+            "name": "balanceOfContract",
             "outputs": [
                 {
                     "internalType": "uint256",
@@ -558,19 +577,6 @@ export const init = async () => {
             "inputs": [
                 {
                     "internalType": "uint256",
-                    "name": "amount",
-                    "type": "uint256"
-                }
-            ],
-            "name": "deposit",
-            "outputs": [],
-            "stateMutability": "payable",
-            "type": "function"
-        },
-        {
-            "inputs": [
-                {
-                    "internalType": "uint256",
                     "name": "taskIndex",
                     "type": "uint256"
                 }
@@ -614,7 +620,7 @@ export const init = async () => {
                     "type": "bool"
                 },
                 {
-                    "internalType": "enum myERC20Token.ActorType",
+                    "internalType": "enum Utils.ActorType",
                     "name": "actorType",
                     "type": "uint8"
                 },
@@ -624,14 +630,9 @@ export const init = async () => {
                     "type": "string"
                 },
                 {
-                    "internalType": "enum myERC20Token.Category",
+                    "internalType": "enum Utils.Category",
                     "name": "category",
                     "type": "uint8"
-                },
-                {
-                    "internalType": "uint256",
-                    "name": "reputatie",
-                    "type": "uint256"
                 },
                 {
                     "internalType": "address",
@@ -643,16 +644,28 @@ export const init = async () => {
             "type": "function"
         },
         {
+            "inputs": [],
+            "name": "exchange",
+            "outputs": [],
+            "stateMutability": "payable",
+            "type": "function"
+        },
+        {
             "inputs": [
                 {
                     "internalType": "uint256",
                     "name": "taskIndex",
                     "type": "uint256"
+                },
+                {
+                    "internalType": "uint256",
+                    "name": "amount",
+                    "type": "uint256"
                 }
             ],
             "name": "financeTask",
             "outputs": [],
-            "stateMutability": "payable",
+            "stateMutability": "nonpayable",
             "type": "function"
         },
         {
@@ -671,7 +684,7 @@ export const init = async () => {
                     "type": "bool"
                 },
                 {
-                    "internalType": "enum myERC20Token.ActorType",
+                    "internalType": "enum Utils.ActorType",
                     "name": "actorType",
                     "type": "uint8"
                 },
@@ -734,7 +747,7 @@ export const init = async () => {
                     "type": "bool"
                 },
                 {
-                    "internalType": "enum myERC20Token.ActorType",
+                    "internalType": "enum Utils.ActorType",
                     "name": "actorType",
                     "type": "uint8"
                 },
@@ -744,7 +757,7 @@ export const init = async () => {
                     "type": "string"
                 },
                 {
-                    "internalType": "enum myERC20Token.Category",
+                    "internalType": "enum Utils.Category",
                     "name": "category",
                     "type": "uint8"
                 },
@@ -760,6 +773,13 @@ export const init = async () => {
                 }
             ],
             "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "inputs": [],
+            "name": "fundContract",
+            "outputs": [],
+            "stateMutability": "payable",
             "type": "function"
         },
         {
@@ -816,7 +836,7 @@ export const init = async () => {
                     "type": "bool"
                 },
                 {
-                    "internalType": "enum myERC20Token.ActorType",
+                    "internalType": "enum Utils.ActorType",
                     "name": "actorType",
                     "type": "uint8"
                 },
@@ -900,7 +920,7 @@ export const init = async () => {
                     "type": "bool"
                 },
                 {
-                    "internalType": "enum myERC20Token.ActorType",
+                    "internalType": "enum Utils.ActorType",
                     "name": "actorType",
                     "type": "uint8"
                 },
@@ -1060,6 +1080,19 @@ export const init = async () => {
                     "type": "uint256"
                 }
             ],
+            "name": "startTimerEvaluator",
+            "outputs": [],
+            "stateMutability": "nonpayable",
+            "type": "function"
+        },
+        {
+            "inputs": [
+                {
+                    "internalType": "uint256",
+                    "name": "taskIndex",
+                    "type": "uint256"
+                }
+            ],
             "name": "startTimerFreelancers",
             "outputs": [],
             "stateMutability": "nonpayable",
@@ -1139,12 +1172,12 @@ export const init = async () => {
                     "type": "address"
                 },
                 {
-                    "internalType": "enum myERC20Token.Category",
+                    "internalType": "enum Utils.Category",
                     "name": "category",
                     "type": "uint8"
                 },
                 {
-                    "internalType": "enum myERC20Token.TaskStatus",
+                    "internalType": "enum Utils.TaskStatus",
                     "name": "taskStatus",
                     "type": "uint8"
                 }
@@ -1247,7 +1280,7 @@ export const init = async () => {
                     "type": "bool"
                 },
                 {
-                    "internalType": "enum myERC20Token.ActorType",
+                    "internalType": "enum Utils.ActorType",
                     "name": "actorType",
                     "type": "uint8"
                 }
@@ -1310,13 +1343,22 @@ export const init = async () => {
 
 	marketContract = new web3.eth.Contract(
 		marketAbi,
-		'0xf61F9f50f8D06c964445F00a692CB054B28E01bE'
+		'0xc98Ed98842c7cc68c9460CF31af3e7940138333E'
 	);
 
     console.log("marketplace methods:", marketContract.methods);
 
 	isInitialized = true;
 };
+
+export const getCurrentUserBalanceWeb3 = async() => {
+    if(!isInitialized){
+        await init();
+    }
+    return marketContract.methods
+        .balanceOf(selectedAccount)
+        .call();
+}
 
 export const getSelectedAccWeb3 = async() => {
     if(!isInitialized){
@@ -1722,7 +1764,7 @@ export const reviewTaskWeb3 = async(taskIndex, taskDone) => {
             })
 }
 
-export const applyForTaskWeb3 = async(taskIndex, value) => {
+export const applyForTaskWeb3 = async(taskIndex) => {
     if(!isInitialized){
         await init();
     }
@@ -1730,8 +1772,7 @@ export const applyForTaskWeb3 = async(taskIndex, value) => {
             .methods
             .applyForTask(taskIndex)
             .send({
-                from: selectedAccount,
-                value: web3.utils.toWei(value, "wei")   
+                from: selectedAccount 
             },
             (err, res) => {
                 console.log(res);
@@ -1782,10 +1823,9 @@ export const financeTaskWeb3 = async(taskIndex, value) => {
     }
     return marketContract
             .methods
-            .financeTask(taskIndex)
+            .financeTask(taskIndex, value)
             .send({
-                from: selectedAccount,
-                value: web3.utils.toWei(value, "wei")   
+                from: selectedAccount
             },
             (err, res) => {
                 console.log(res);
@@ -1849,5 +1889,21 @@ export const evaluateTaskWeb3 = async(taskIndex, taskDone) => {
                 return res;
             })
 }
+
+export const exchangeWeiForTokensWeb3 = async(value)=>{
+    if(!isInitialized){
+        await init();
+    }
+
+    return marketContract
+            .methods
+            .exchange()
+            .send({
+                from: selectedAccount,
+                value: web3.utils.toWei(value, "wei")
+            })
+}
+
+
 
 

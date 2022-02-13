@@ -1,11 +1,12 @@
 const TASK_STATUS = {
     'CREATED'   : 0,
     'FINANCED'  : 1,
-    'PROGRESS'  : 2,
-    'READY'     : 3,
-    'DECLINED'  : 4,
-    'JUDGING'   : 5,
-    'DONE'      : 6
+    'CERTIFIED' : 2,
+    'PROGRESS'  : 3,
+    'READY'     : 4,
+    'DECLINED'  : 5,
+    'JUDGING'   : 6,
+    'DONE'      : 7
 }
 
 export function getTaskStatesString(taskStatus){
@@ -14,6 +15,8 @@ export function getTaskStatesString(taskStatus){
             return 'Created';
         case TASK_STATUS.FINANCED:
             return 'Financed';
+        case TASK_STATUS.CERTIFIED:
+            return 'Certified';
         case TASK_STATUS.PROGRESS:
             return 'In Progress';
         case TASK_STATUS.READY:

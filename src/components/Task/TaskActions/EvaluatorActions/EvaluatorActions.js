@@ -1,15 +1,18 @@
-import React, { useState } from "react";
+import React, { useContext, useState } from "react";
 import { Button } from "antd";
 import { useEffect } from "react/cjs/react.development";
 import TASK_STATUS from "../../../../TaskStates";
 import { evaluateTaskWeb3 } from "../../../../web3/Web3Client";
+import { GlobalContext } from "../../../../context/MyContext";
 
 export default function EvaluatorActions({selectedTask}) {
 
+  const { setSpinner } = useContext(GlobalContext);
   useEffect(()=>{
 
   }, [])
   const onAccept = () => {
+    setSpinner(true);
     evaluateTaskWeb3(parseInt(selectedTask.taskIndex), 1).then((result)=>{
       if(result.status){
         window.location.reload();
@@ -18,6 +21,7 @@ export default function EvaluatorActions({selectedTask}) {
   }
 
   const onDecline = () => {
+    setSpinner(true);
     evaluateTaskWeb3(parseInt(selectedTask.taskIndex), 0).then((result)=>{
       if(result.status){
         window.location.reload();

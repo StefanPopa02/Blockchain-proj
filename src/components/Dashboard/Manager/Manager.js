@@ -14,7 +14,16 @@ import TASK_STATUS, { getTaskStatesString } from "../../../TaskStates";
 
 export default function Manager() {
   const [tasksToDisplay, setTasksToDisplay] = useState([]);
-  const { tasks, setTasks } = useContext(GlobalContext);
+  const { tasks, setTasks, setSpinner } = useContext(GlobalContext);
+  const [ ready, setReady ] = useState(false);
+  useEffect(()=>{
+    if(ready){
+        setSpinner(false);
+    }else{
+        setSpinner(true);
+    }
+}, [ready])
+
   useEffect(() => {
     const getAllTasks = async () => {
       const allTasks = await getAllTasksWeb3();
@@ -33,6 +42,7 @@ export default function Manager() {
       });
       console.log("tasksToDisplay", tasksToDisplayTmp);
       setTasksToDisplay(tasksToDisplayTmp);
+      setReady(true);
     };
     getAllTasks();
   }, []);

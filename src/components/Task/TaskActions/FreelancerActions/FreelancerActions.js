@@ -1,12 +1,14 @@
-import React, { useState } from "react";
+import React, { useContext, useState } from "react";
 import { Button } from "antd";
 import { useEffect } from "react/cjs/react.development";
 import { applyForTaskWeb3, checkEmptyAddr, getApplyingFreelancersEventForTasksWeb3, getApplyingFreelancersForTaskWeb3, getSelectedAccWeb3, nominateTaskReadyWeb3 } from "../../../../web3/Web3Client";
 import TASK_STATUS from "../../../../TaskStates";
+import { GlobalContext } from "../../../../context/MyContext";
 
 export default function FreelancerActions({selectedTask}) {
   const [selectedAcc, setSelectedAcc] = useState('');
   const [alreadyApplied, setAlreadyApplied] = useState(false);
+  const { setSpinner } = useContext(GlobalContext);
   useEffect(() => {
     const getApplyFreelancersFromEvent = async() => {
       const appFreelancersForTask = await getApplyingFreelancersForTaskWeb3(parseInt(selectedTask.taskIndex));
@@ -23,6 +25,7 @@ export default function FreelancerActions({selectedTask}) {
   }, [selectedTask])
 
   const onSubmitWork = () => {
+    setSpinner(true);
     nominateTaskReadyWeb3(parseInt(selectedTask.taskIndex)).then((result)=>{
       if(result.status){
         window.location.reload();
@@ -31,6 +34,7 @@ export default function FreelancerActions({selectedTask}) {
   }
 
   const onApplyToTask = () => {
+    setSpinner(true);
     applyForTaskWeb3(parseInt(selectedTask.taskIndex), selectedTask.RE).then((result)=>{
       if(result.status){
         window.location.reload();
@@ -41,11 +45,13 @@ export default function FreelancerActions({selectedTask}) {
   return (
     <div>
       <h1 style={{textAlign: 'center'}}>FreelancerActions</h1>
+      {parseInt(selectedTask.taskStatus) !== TASK_STATUS.DECLINED &&
+        <div>
         {
           checkEmptyAddr(selectedTask.evaluatorAddr) ? 
           <h3>Task doesn't have an evaluator yet!</h3>
           : !alreadyApplied ?
-          parseInt(selectedTask.taskStatus) === TASK_STATUS.FINANCED &&
+          parseInt(selectedTask.taskStatus) === TASK_STATUS.CERTIFIED &&
             <Button type="primary" onClick={() => onApplyToTask()}>
               Apply for task
             </Button>
@@ -62,7 +68,7 @@ export default function FreelancerActions({selectedTask}) {
             Submit work
           </Button>
         }
-        
+        </div>}
     </div>
   );
 }

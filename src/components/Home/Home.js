@@ -8,7 +8,7 @@ import { getActorTypeString } from '../../ActorTypes';
 
 const Home = () => {
     const history = useNavigate();
-    const { userDetails, setUserDetails } = useContext(GlobalContext);
+    const { userDetails, setUserDetails, setSpinner } = useContext(GlobalContext);
     const [name, setName] = useState('');
     const [ready, setReady] = useState(false);
 
@@ -27,8 +27,12 @@ const Home = () => {
     },[userDetails.actorType])
 
     useEffect(()=>{
-        
-    }, [name])
+        if(ready){
+            setSpinner(false);
+        }else{
+            setSpinner(true);
+        }
+    }, [ready])
 
     useEffect(()=>{
         if(ready){

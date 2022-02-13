@@ -1,10 +1,11 @@
-import React, { useState } from "react";
+import React, { useContext, useState } from "react";
 import { Button, Input, Divider } from "antd";
 import { useEffect } from "react/cjs/react.development";
 import {
   getFinantatorsFundingEvidenceForTaskWeb3,
   getSelectedAccWeb3,
 } from "../../../../web3/Web3Client";
+import { GlobalContext } from "../../../../context/MyContext";
 
 export default function FinantatorActions({
   setFunding,
@@ -74,7 +75,8 @@ export default function FinantatorActions({
             <h2>Withdraw amount</h2>
             <Input onChange={(e) => setWithdrawAmount(e.target.value)} />
             <Button
-              type="secondary"
+              type="primary"
+              danger
               style={{ marginTop: 4 }}
               onClick={() => {
                 withdraw(withdrawAmount);
