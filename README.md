@@ -2,6 +2,8 @@
 
 # How to run
 You must have metamask extension installed
+
 npm install 
+
 npm run
 
