@@ -1,3 +1,7 @@
 # Marketplace for freelancing using ERC20 and Provable API 
 
-Description of the project [here](https://profs.info.uaic.ro/~eonica/blockchain/eval.html#project)
+# How to run
+You must have metamask extension installed
+npm install 
+npm run
+
